@@ -149,6 +149,7 @@ function renderResult(result) {
 }
 
 async function requestQuote(isbn) {
+  const searchedIsbn = String(isbn || "").trim();
   showMessage("Checking Micobooks...");
   try {
     const response = await fetch("/api/quote", {
@@ -161,7 +162,7 @@ async function requestQuote(isbn) {
     renderResult(payload);
     showMessage("Quote received.");
   } catch (error) {
-    showMessage(error.message, true);
+    showMessage(`ISBN ${searchedIsbn}: ${error.message}`, true);
   }
 }
 

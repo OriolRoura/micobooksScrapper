@@ -119,7 +119,11 @@ async def quote_from_image(image: UploadFile = File(...)) -> QuoteResponse:
         except MicobooksError:
             continue
 
-    raise HTTPException(status_code=404, detail="No detected ISBN was found by Micobooks.")
+    searched_identifiers = ", ".join(candidates)
+    raise HTTPException(
+        status_code=404,
+        detail=f"No price found for ISBN/EAN: {searched_identifiers}.",
+    )
 
 
 if __name__ == "__main__":

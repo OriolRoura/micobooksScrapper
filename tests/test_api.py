@@ -4,7 +4,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 
 from micobooks_scraper.api import app
-from micobooks_scraper.client import BookQuote
+from micobooks_scraper.client import BookQuote, MicobooksError
 
 
 class QuoteApiTests(unittest.TestCase):
@@ -64,6 +64,20 @@ class QuoteApiTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["seller_profit"], 0.28)
         get_quote.assert_called_once_with("9788497593182")
+
+    @patch("micobooks_scraper.api.extract_isbn_candidates")
+    @patch("micobooks_scraper.api.MicobooksClient.get_quote")
+    def test_image_quote_reports_detected_isbn_when_price_is_missing(self, get_quote, extract_candidates) -> None:
+        extract_candidates.return_value = ["9788497593182"]
+        get_quote.side_effect = MicobooksError("No quotation found")
+
+        response = self.client.post(
+            "/api/quote-from-image",
+            files={"image": ("book.jpg", b"image", "image/jpeg")},
+        )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertIn("9788497593182", response.json()["detail"])
 
 
 if __name__ == "__main__":
