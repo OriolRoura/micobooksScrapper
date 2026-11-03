@@ -1,0 +1,8 @@
+InitialPage.html
+PageToScrape.html
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+certs/

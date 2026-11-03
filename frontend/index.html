@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#102a43">
+    <title>Book value checker</title>
+    <link rel="stylesheet" href="/app/styles.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="intro">
+        <p class="eyebrow">MICOBOOKS / PERSONAL TOOL</p>
+        <h1>Find a book's value.</h1>
+        <p class="lede">Photograph the ISBN barcode or enter it by hand to check the current seller estimate.</p>
+      </header>
+
+      <section class="capture-panel" aria-labelledby="capture-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">STEP 01</p>
+            <h2 id="capture-title">Capture the ISBN</h2>
+          </div>
+          <span class="status-dot" aria-hidden="true"></span>
+        </div>
+
+        <div class="camera-stage" data-camera-stage>
+          <video data-camera-preview autoplay playsinline muted hidden></video>
+          <canvas data-camera-canvas hidden></canvas>
+          <div class="camera-empty" data-camera-empty>
+            <span class="camera-mark" aria-hidden="true">▣</span>
+            <strong>Camera ready when you are</strong>
+            <span>Use good light and keep the barcode flat.</span>
+          </div>
+          <img data-image-preview alt="Selected book image preview" hidden>
+        </div>
+
+        <div class="action-row">
+          <button class="button button-primary" type="button" data-start-camera>Open camera</button>
+          <button class="button button-secondary" type="button" data-take-photo hidden>Take photo</button>
+          <button class="button button-primary" type="button" data-submit-image hidden>Analyze image</button>
+          <label class="button button-secondary" for="image-input">Choose image</label>
+          <input id="image-input" type="file" accept="image/*" capture="environment" data-image-input>
+        </div>
+
+        <p class="helper" data-camera-message>Camera access is requested only after you press Open camera.</p>
+      </section>
+
+      <section class="manual-panel" aria-labelledby="manual-title">
+        <div>
+          <p class="eyebrow">QUICK CHECK</p>
+          <h2 id="manual-title">Enter an ISBN manually</h2>
+        </div>
+        <form class="isbn-form" data-isbn-form>
+          <label for="isbn-input">ISBN / EAN</label>
+          <div class="input-row">
+            <input id="isbn-input" name="isbn" inputmode="numeric" autocomplete="off" placeholder="9788497593182" minlength="10" maxlength="17" required>
+            <button class="button button-dark" type="submit">Check price</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="result-panel" aria-live="polite" data-result-panel hidden>
+        <p class="eyebrow">RESULT</p>
+        <div class="result-content">
+          <img data-result-image alt="" hidden>
+          <div>
+            <h2 data-result-title></h2>
+            <p class="muted" data-result-identifiers></p>
+          </div>
+          <strong class="price" data-result-price></strong>
+        </div>
+      </section>
+
+      <p class="message" data-message role="status"></p>
+    </main>
+    <script src="/app/app.js" defer></script>
+  </body>
+</html>
