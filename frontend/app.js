@@ -1,10 +1,28 @@
-const state = { imageBlob: null, imageCapture: null, stream: null };
+const state = {
+  historyRecords: [],
+  historySource: "server",
+  imageBlob: null,
+  imageCapture: null,
+  stream: null
+};
 const elements = {
   cameraCanvas: document.querySelector("[data-camera-canvas]"),
   cameraEmpty: document.querySelector("[data-camera-empty]"),
   cameraMessage: document.querySelector("[data-camera-message]"),
   cameraPreview: document.querySelector("[data-camera-preview]"),
   cameraStage: document.querySelector("[data-camera-stage]"),
+  historyBackdrop: document.querySelector("[data-history-backdrop]"),
+  historyClose: document.querySelector("[data-history-close]"),
+  historyCount: document.querySelector("[data-history-count]"),
+  historyDownload: document.querySelector("[data-history-download]"),
+  historyDrawer: document.querySelector("[data-history-drawer]"),
+  historyFile: document.querySelector("[data-history-file]"),
+  historyList: document.querySelector("[data-history-list]"),
+  historyOpen: document.querySelector("[data-history-open]"),
+  historyRefresh: document.querySelector("[data-history-refresh]"),
+  historySummary: document.querySelector("[data-history-summary]"),
+  historySource: document.querySelector("[data-history-source]"),
+  historyTotal: document.querySelector("[data-history-total]"),
   imageInput: document.querySelector("[data-image-input]"),
   imagePreview: document.querySelector("[data-image-preview]"),
   message: document.querySelector("[data-message]"),
@@ -21,6 +39,151 @@ const elements = {
 function showMessage(text, isError = false) {
   elements.message.textContent = text;
   elements.message.classList.toggle("error", isError);
+}
+
+function setHistoryDrawer(open) {
+  elements.historyDrawer.hidden = !open;
+  elements.historyBackdrop.hidden = !open;
+  elements.historyDrawer.setAttribute("aria-hidden", String(!open));
+  document.body.classList.toggle("drawer-open", open);
+}
+
+function formatHistoryDate(value) {
+  if (!value) return "Date unavailable";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+}
+
+function createDecisionButton(record, decision, label) {
+  const button = document.createElement("button");
+  button.className = "decision-button";
+  button.dataset.decision = decision;
+  button.dataset.recordId = record.id;
+  button.textContent = label;
+  if (record.sell_decision === decision) button.classList.add("is-active");
+  return button;
+}
+
+function renderHistory(records, sourceLabel) {
+  state.historyRecords = records;
+  elements.historyCount.textContent = String(records.length);
+  const pricedCount = records.filter((record) => record.found).length;
+  const sellCount = records.filter((record) => record.sell_decision === "sell").length;
+  const sellTotal = records
+    .filter((record) => record.sell_decision === "sell")
+    .reduce((total, record) => total + (Number(record.seller_profit) || 0), 0);
+  elements.historySummary.textContent = `${records.length} analyzed · ${pricedCount} with price · ${sellCount} marked sell`;
+  elements.historyTotal.textContent = `Total for marked sell: ${sellTotal.toFixed(2)} EUR`;
+  elements.historySource.textContent = sourceLabel;
+  elements.historyList.replaceChildren();
+
+  if (!records.length) {
+    const empty = document.createElement("p");
+    empty.className = "history-empty";
+    empty.textContent = "No analyzed books yet.";
+    elements.historyList.append(empty);
+    return;
+  }
+
+  records.forEach((record) => {
+    const item = document.createElement("article");
+    item.className = `history-item ${record.found ? "is-found" : "is-missing"}`;
+
+    const title = document.createElement("h3");
+    title.textContent = record.title || (record.found ? "Title unavailable" : "No price found");
+    item.append(title);
+
+    const isbn = document.createElement("p");
+    isbn.className = "history-isbn";
+    isbn.textContent = `ISBN: ${record.isbn || "Unavailable"}`;
+    item.append(isbn);
+
+    const date = document.createElement("p");
+    date.className = "history-meta";
+    date.textContent = formatHistoryDate(record.analyzed_at);
+    item.append(date);
+
+    if (record.found) {
+      const price = document.createElement("p");
+      price.className = "history-price";
+      price.textContent = `${Number(record.seller_profit).toFixed(2)} EUR`;
+      item.append(price);
+
+      const decisions = document.createElement("div");
+      decisions.className = "decision-row";
+      decisions.append(
+        createDecisionButton(record, "sell", "Sell"),
+        createDecisionButton(record, "not_sell", "Do not sell")
+      );
+      item.append(decisions);
+    }
+
+    elements.historyList.append(item);
+  });
+}
+
+async function loadServerHistory() {
+  elements.historySource.textContent = "Loading server history...";
+  try {
+    const response = await fetch("/api/history");
+    const records = await response.json();
+    if (!response.ok || !Array.isArray(records)) throw new Error("History could not be loaded.");
+    state.historySource = "server";
+    renderHistory(records, "Stored on this server");
+  } catch (error) {
+    elements.historySource.textContent = error.message;
+    renderHistory([], "History unavailable");
+  }
+}
+
+async function loadHistoryFile(event) {
+  const [file] = event.target.files;
+  if (!file) return;
+
+  try {
+    const records = JSON.parse(await file.text());
+    if (!Array.isArray(records) || records.some((record) => !record || typeof record.isbn !== "string")) {
+      throw new Error("The JSON must contain an array of records with ISBN values.");
+    }
+    state.historySource = "file";
+    renderHistory(records, `Loaded locally from ${file.name}`);
+  } catch (error) {
+    elements.historySource.textContent = error.message;
+  }
+  event.target.value = "";
+}
+
+async function updateDecision(recordId, decision) {
+  const record = state.historyRecords.find((item) => item.id === recordId);
+  if (!record) return;
+
+  try {
+    if (state.historySource === "server") {
+      const response = await fetch(`/api/history/${encodeURIComponent(recordId)}/decision`, {
+        body: JSON.stringify({ decision }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH"
+      });
+      const updated = await response.json();
+      if (!response.ok) throw new Error(updated.detail || "Decision could not be saved.");
+      Object.assign(record, updated);
+    } else {
+      record.sell_decision = decision;
+    }
+    renderHistory(state.historyRecords, state.historySource === "server" ? "Stored on this server" : elements.historySource.textContent);
+  } catch (error) {
+    elements.historySource.textContent = error.message;
+  }
+}
+
+function downloadHistory() {
+  const file = new Blob([JSON.stringify(state.historyRecords, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(file);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = "analyzed_books.json";
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function stopCamera() {
@@ -118,7 +281,6 @@ async function takePhoto() {
       }, "image/jpeg", 0.95);
       console.info("[camera] Captured the visible camera frame.", frame.width, "x", frame.height);
       return;
-      return;
     } catch (error) {
       console.warn("[camera] grabFrame failed; using video frame fallback.", error);
     }
@@ -188,6 +350,19 @@ async function submitImage() {
 document.querySelector("[data-start-camera]").addEventListener("click", openCamera);
 elements.takePhoto.addEventListener("click", takePhoto);
 elements.submitImage.addEventListener("click", submitImage);
+elements.historyOpen.addEventListener("click", () => {
+  setHistoryDrawer(true);
+  loadServerHistory();
+});
+elements.historyClose.addEventListener("click", () => setHistoryDrawer(false));
+elements.historyBackdrop.addEventListener("click", () => setHistoryDrawer(false));
+elements.historyRefresh.addEventListener("click", loadServerHistory);
+elements.historyDownload.addEventListener("click", downloadHistory);
+elements.historyFile.addEventListener("change", loadHistoryFile);
+elements.historyList.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-decision]");
+  if (button) updateDecision(button.dataset.recordId, button.dataset.decision);
+});
 elements.imageInput.addEventListener("change", (event) => {
   const [file] = event.target.files;
   if (file) {
@@ -200,3 +375,9 @@ document.querySelector("[data-isbn-form]").addEventListener("submit", (event) =>
   event.preventDefault();
   requestQuote(new FormData(event.currentTarget).get("isbn"));
 });
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") setHistoryDrawer(false);
+});
+
+loadServerHistory();

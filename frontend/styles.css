@@ -22,6 +22,8 @@ body {
   font-family: "DM Sans", sans-serif;
 }
 
+body.drawer-open { overflow: hidden; }
+
 body::before {
   background: var(--mint);
   content: "";
@@ -35,6 +37,7 @@ body::before {
 
 .shell { margin: 0 auto; max-width: 760px; padding: 2rem 1rem 4rem; }
 .intro { padding: 1.5rem 0 2rem; }
+.intro-topline { align-items: center; display: flex; justify-content: space-between; }
 .eyebrow { font: 700 0.7rem/1 "Space Mono", monospace; letter-spacing: 0.08em; margin: 0 0 0.8rem; }
 h1, h2, p { margin-top: 0; }
 h1 { font-size: clamp(2.4rem, 11vw, 5rem); letter-spacing: -0.06em; line-height: 0.95; margin-bottom: 1rem; max-width: 9ch; }
@@ -59,6 +62,8 @@ h2 { font-size: 1.35rem; letter-spacing: -0.03em; margin-bottom: 0; }
 .button-secondary { background: #edf2f7; color: var(--ink); }
 .button-dark { background: var(--ink); color: var(--white); }
 .button:hover { filter: brightness(0.96); }
+.history-trigger { background: var(--ink); border: 0; border-radius: 999px; color: var(--white); cursor: pointer; font: 700 0.75rem "Space Mono", monospace; padding: 0.65rem 0.8rem; }
+.history-trigger span { background: var(--coral); border-radius: 999px; color: var(--ink); display: inline-block; margin-left: 0.25rem; min-width: 1.25rem; padding: 0.15rem; }
 input[type="file"] { height: 1px; opacity: 0; overflow: hidden; position: absolute; width: 1px; }
 .helper, .muted, .message { color: var(--muted); font-size: 0.82rem; line-height: 1.45; margin: 0.8rem 0 0; }
 .isbn-form { margin-top: 1.1rem; }
@@ -70,6 +75,27 @@ input[type="file"] { height: 1px; opacity: 0; overflow: hidden; position: absolu
 .price { color: #167052; font: 700 1.8rem "Space Mono", monospace; }
 .message { min-height: 1.3rem; }
 .message.error { color: #a63d2d; }
+
+.history-backdrop { background: rgba(16, 42, 67, 0.35); inset: 0; position: fixed; z-index: 10; }
+.history-drawer { background: var(--paper); box-shadow: -15px 0 45px rgba(16, 42, 67, 0.18); display: flex; flex-direction: column; inset: 0 0 0 auto; max-width: 30rem; overflow-y: auto; padding: 1.25rem; position: fixed; width: min(100%, 30rem); z-index: 11; }
+.drawer-header { align-items: flex-start; display: flex; justify-content: space-between; }
+.drawer-header h2 { font-size: 1.55rem; }
+.icon-button { background: transparent; border: 0; color: var(--ink); cursor: pointer; font-size: 2rem; line-height: 1; padding: 0 0.25rem; }
+.drawer-tools { display: flex; flex-wrap: wrap; gap: 0.6rem; margin: 1rem 0 0.25rem; }
+.history-summary { color: var(--ink); font: 700 0.75rem "Space Mono", monospace; margin: 0.7rem 0 0; }
+.history-total { color: #167052; font: 700 0.9rem "Space Mono", monospace; margin: 0.45rem 0 0; }
+.history-list { display: grid; gap: 0.8rem; margin-top: 1rem; }
+.history-empty { border: 1px dashed #9fb3c8; color: var(--muted); padding: 1rem; text-align: center; }
+.history-item { background: var(--white); border-left: 4px solid var(--line); box-shadow: 0 8px 20px rgba(16, 42, 67, 0.07); padding: 1rem; }
+.history-item.is-found { border-left-color: #42a982; }
+.history-item.is-missing { border-left-color: var(--coral); }
+.history-item h3 { font-size: 1rem; margin: 0 0 0.4rem; }
+.history-isbn { font: 0.75rem "Space Mono", monospace; margin: 0; overflow-wrap: anywhere; }
+.history-meta { color: var(--muted); font-size: 0.78rem; margin: 0.5rem 0 0; }
+.history-price { color: #167052; font: 700 1rem "Space Mono", monospace; margin: 0.7rem 0; }
+.decision-row { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.8rem; }
+.decision-button { background: #edf2f7; border: 1px solid transparent; border-radius: 0.35rem; color: var(--ink); cursor: pointer; font: 700 0.75rem "DM Sans", sans-serif; padding: 0.55rem 0.65rem; }
+.decision-button.is-active { background: var(--mint); border-color: #42a982; }
 
 @media (min-width: 640px) {
   .shell { padding: 4rem 1.5rem 6rem; }

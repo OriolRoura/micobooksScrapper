@@ -5,12 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#102a43">
     <title>Book value checker</title>
-    <link rel="stylesheet" href="/app/styles.css">
+    <link rel="stylesheet" href="/app/styles.css?v=4">
   </head>
   <body>
     <main class="shell">
       <header class="intro">
-        <p class="eyebrow">MICOBOOKS / PERSONAL TOOL</p>
+        <div class="intro-topline">
+          <p class="eyebrow">MICOBOOKS / PERSONAL TOOL</p>
+          <button class="history-trigger" type="button" data-history-open>
+            History <span data-history-count>0</span>
+          </button>
+        </div>
         <h1>Find a book's value.</h1>
         <p class="lede">Photograph the ISBN barcode or enter it by hand to check the current seller estimate.</p>
       </header>
@@ -74,6 +79,27 @@
 
       <p class="message" data-message role="status"></p>
     </main>
-    <script src="/app/app.js" defer></script>
+
+    <div class="history-backdrop" data-history-backdrop hidden></div>
+    <aside class="history-drawer" data-history-drawer aria-labelledby="history-title" aria-hidden="true" hidden>
+      <div class="drawer-header">
+        <div>
+          <p class="eyebrow">YOUR RECORD</p>
+          <h2 id="history-title">Analyzed books</h2>
+        </div>
+        <button class="icon-button" type="button" aria-label="Close history" data-history-close>&times;</button>
+      </div>
+      <div class="drawer-tools">
+        <button class="button button-secondary" type="button" data-history-refresh>Refresh</button>
+        <label class="button button-secondary" for="history-file-input">Load JSON</label>
+        <button class="button button-secondary" type="button" data-history-download>Download JSON</button>
+        <input id="history-file-input" type="file" accept="application/json,.json" data-history-file>
+      </div>
+      <p class="history-summary" data-history-summary></p>
+      <p class="history-total" data-history-total></p>
+      <p class="helper" data-history-source>Loading server history...</p>
+      <div class="history-list" data-history-list></div>
+    </aside>
+    <script src="/app/app.js?v=7" defer></script>
   </body>
 </html>

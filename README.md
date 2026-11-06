@@ -46,6 +46,27 @@ Set `ALLOWED_ORIGINS` to a comma-separated list when the webpage is served from 
 
 Open the mobile-first webpage at `http://127.0.0.1:8000/app/`. It supports camera/image capture and manual ISBN lookup. The image endpoint runs server-side OCR using Tesseract. On Debian/Ubuntu Linux, install the executable with `sudo apt install tesseract-ocr`.
 
+## Analysis history
+
+Each ISBN analysis is stored locally in `data/analyzed_books.json`. The file is runtime data and is ignored by Git. Records have this shape:
+
+```json
+{
+	"id": "record-identifier",
+	"analyzed_at": "2026-11-03T12:00:00+00:00",
+	"isbn": "9788497593182",
+	"title": "Book title or null",
+	"seller_profit": 0.28,
+	"found": true,
+	"sell_decision": null
+}
+```
+
+The history API is ready for the future history view:
+
+- `GET /api/history` returns newest records first.
+- `PATCH /api/history/{id}/decision` accepts `{"decision":"sell"}` or `{"decision":"not_sell"}`.
+
 ## Test
 
 ```powershell
