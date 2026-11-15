@@ -1,50 +1,106 @@
 # Micobooks ISBN scraper
 
-Small Python scraper for querying the Micobooks income calculator with an ISBN/EAN.
+Personal-use web tool that captures or uploads a book image, detects an ISBN locally on the server, queries Micobooks, and displays the seller estimate.
 
 ## Requirements
 
 - Python 3.10 or newer
-- Dependencies in `requirements.txt`
+- Native Tesseract OCR executable
+- HTTPS certificate files for the web launcher:
+	- `certs/server.crt`
+	- `certs/server.key`
 
-Install the backend dependencies:
+Python dependencies are pinned by compatible version ranges in `requirements.txt`.
+
+## Setup
+
+Create the virtual environment if it does not exist:
 
 ```powershell
-python -m pip install -r requirements.txt
+python -m venv .venv
 ```
 
-## Run it
+Install all Python dependencies into it:
+
+```powershell
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+The Python package `pytesseract` is only a wrapper. Install native Tesseract separately:
+
+```powershell
+winget install UB-Mannheim.TesseractOCR
+```
+
+On Debian/Ubuntu Linux:
+
+```bash
+sudo apt install tesseract-ocr
+```
+
+## Start the HTTPS server
 
 From the project directory:
 
 ```powershell
-python -m micobooks_scraper
+.venv\Scripts\python.exe -m micobooks_scraper.server
 ```
 
-The default ISBN is `9788497593182`. To query another book, set `ISBN`:
+The launcher binds to `0.0.0.0` and serves HTTPS on port `8443` using `certs/server.crt` and `certs/server.key`. By default, requests are accepted only from the same computer or private LAN addresses. `0.0.0.0` is only the bind address; do not put it in a browser URL.
+
+On the same computer:
+
+```text
+https://127.0.0.1:8443/app/
+```
+
+From another device on the same LAN, replace the IP with the server's LAN address:
+
+```text
+https://192.168.2.46:8443/app/
+```
+
+Health check:
+
+```text
+https://192.168.2.46:8443/health
+```
+
+To customize the server:
 
 ```powershell
-$env:ISBN = "9788497593182"
-python -m micobooks_scraper
+.venv\Scripts\python.exe -m micobooks_scraper.server --host 0.0.0.0 --port 9443 --cert certs\server.crt --key certs\server.key
 ```
 
-The client sends the same request as the calculator page and extracts `seller_profit` from the JSON response. Use a reasonable request rate and follow Micobooks' terms before automating larger batches.
-
-## Run the backend
+Public-client filtering can be disabled only explicitly:
 
 ```powershell
-python -m micobooks_scraper.api
+.venv\Scripts\python.exe -m micobooks_scraper.server --allow-public-access
 ```
 
-The API listens on `http://127.0.0.1:8000`. Check it with `GET /health` or send an ISBN to `POST /api/quote`:
+Do not use this option for normal operation. HTTPS encrypts traffic but does
+not restrict who can connect. Do not configure router port forwarding or UPnP
+for this personal-use service.
+
+The certificate must cover the IP or hostname used in the browser. The mobile device must trust the local CA that signed the certificate. Never share `server.key` or `rootCA-key.pem`.
+
+Allow the HTTPS port through Windows Firewall when testing from another device:
 
 ```powershell
-Invoke-RestMethod http://127.0.0.1:8000/api/quote -Method Post -ContentType "application/json" -Body '{"isbn":"9788497593182"}'
+New-NetFirewallRule -DisplayName "Micobooks HTTPS development" -Direction Inbound -Protocol TCP -LocalPort 8443 -Action Allow -Profile Private
 ```
 
-Set `ALLOWED_ORIGINS` to a comma-separated list when the webpage is served from another origin.
+Keep the firewall rule on the `Private` profile so the service is not opened
+on public networks.
 
-Open the mobile-first webpage at `http://127.0.0.1:8000/app/`. It supports camera/image capture and manual ISBN lookup. The image endpoint runs server-side OCR using Tesseract. On Debian/Ubuntu Linux, install the executable with `sudo apt install tesseract-ocr`.
+## Features
+
+- Mobile-first camera and image-upload flow.
+- Server-side EAN/ISBN barcode decoding and Tesseract OCR fallback.
+- Manual ISBN lookup.
+- Local JSON history in `data/analyzed_books.json`.
+- Automatic deduplication of ISBN-10 and equivalent `978` ISBN-13 values.
+- History drawer with sell/not-sell decisions, JSON import, JSON download, and seller-profit totals.
 
 ## Analysis history
 
@@ -62,7 +118,7 @@ Each ISBN analysis is stored locally in `data/analyzed_books.json`. The file is 
 }
 ```
 
-The history API is ready for the future history view:
+The history API is used by the history drawer:
 
 - `GET /api/history` returns newest records first.
 - `PATCH /api/history/{id}/decision` accepts `{"decision":"sell"}` or `{"decision":"not_sell"}`.
@@ -70,5 +126,41 @@ The history API is ready for the future history view:
 ## Test
 
 ```powershell
-python -m unittest discover -s tests -v
+.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
+
+## OpenSpec
+
+OpenSpec project configuration and the current behavior specifications live in
+the [`openspec/`](openspec/) directory. Create proposed work under
+`openspec/changes/<change-name>/` with the standard `proposal.md`,
+`specs/`, `design.md`, and `tasks.md` artifacts. Completed changes move to
+`openspec/changes/archive/`.
+
+### Initialize OpenSpec workflows
+
+The project files above are already prepared. The OpenSpec CLI still needs to
+install the workflow skills that your AI assistant loads. In PowerShell, from
+the repository root, run:
+
+```powershell
+irm https://raw.githubusercontent.com/Fission-AI/OpenSpec/main/scripts/binary/install.ps1 | iex
+openspec init --tools github-copilot
+```
+
+Restart VS Code after initialization. OpenSpec is used in the AI chat, not as a
+separate server or interactive application:
+
+```text
+/openspec-explore
+/openspec-propose add-a-short-change-name
+/openspec-apply-change
+/openspec-sync-specs
+/openspec-archive-change
+```
+
+Review the generated proposal and tasks before applying them. Use
+`openspec list`, `openspec show <change-name>`, and
+`openspec validate <change-name>` in the terminal to inspect or validate
+changes. If the addon exposes a different command spelling, use the exact
+skill names created under `.agents/skills/`.

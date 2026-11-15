@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
-import os
+import ipaddress
 import logging
+import os
 from pathlib import Path
 from typing import Literal
 
 from fastapi import File, FastAPI, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.requests import Request
 
 from .client import MicobooksClient, MicobooksError
 from .history import HistoryStore
@@ -37,6 +40,33 @@ class SellDecisionRequest(BaseModel):
 
 
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
+PRIVATE_NETWORKS = (
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("169.254.0.0/16"),
+    ipaddress.ip_network("fc00::/7"),
+    ipaddress.ip_network("fe80::/10"),
+)
+
+
+def _public_access_enabled() -> bool:
+    return os.getenv("ALLOW_PUBLIC_ACCESS", "").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _is_allowed_client(host: str | None) -> bool:
+    if not host:
+        return False
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return False
+
+    if address.is_loopback:
+        return True
+    if address.version == 6 and address.ipv4_mapped:
+        address = address.ipv4_mapped
+    return any(address in network for network in PRIVATE_NETWORKS)
 
 
 def _allowed_origins() -> list[str]:
@@ -55,6 +85,18 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PATCH"],
     allow_headers=["Content-Type"],
 )
+
+
+@app.middleware("http")
+async def restrict_public_clients(request: Request, call_next):
+    client_host = request.client.host if request.client else None
+    if not _public_access_enabled() and not _is_allowed_client(client_host):
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "This service is restricted to local and private-network clients."},
+        )
+    return await call_next(request)
+
 
 FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
 app.mount("/app", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")

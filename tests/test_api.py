@@ -9,7 +9,7 @@ from micobooks_scraper.client import BookQuote, MicobooksError
 
 class QuoteApiTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.client = TestClient(app)
+        self.client = TestClient(app, client=("127.0.0.1", 50000))
 
     def test_index(self) -> None:
         response = self.client.get("/")
@@ -22,6 +22,29 @@ class QuoteApiTests(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok"})
+
+    def test_public_client_is_rejected(self) -> None:
+        client = TestClient(app, client=("8.8.8.8", 50000))
+
+        response = client.get("/health")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertIn("restricted", response.json()["detail"])
+
+    def test_forwarded_private_address_does_not_bypass_filter(self) -> None:
+        client = TestClient(app, client=("8.8.8.8", 50000))
+
+        response = client.get("/health", headers={"X-Forwarded-For": "192.168.1.20"})
+
+        self.assertEqual(response.status_code, 403)
+
+    @patch.dict("os.environ", {"ALLOW_PUBLIC_ACCESS": "1"})
+    def test_public_access_can_be_explicitly_enabled(self) -> None:
+        client = TestClient(app, client=("8.8.8.8", 50000))
+
+        response = client.get("/health")
+
+        self.assertEqual(response.status_code, 200)
 
     @patch("micobooks_scraper.api.MicobooksClient.get_quote")
     def test_quote_returns_scraped_result(self, get_quote) -> None:

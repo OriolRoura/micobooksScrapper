@@ -1,0 +1,27 @@
+schema: spec-driven
+
+context: |
+  Micobooks Scraper is a Python 3.10+ FastAPI application with a vanilla
+  JavaScript frontend. It detects ISBN/EAN values from uploaded book images
+  using barcode decoding and Tesseract OCR, queries Micobooks for seller
+  estimates, and stores local analysis history in JSON.
+  Preserve the existing Windows-friendly setup and HTTPS launcher.
+  Requirements in specs/ describe observable behavior; implementation details
+  belong in design.md or tasks.md.
+
+rules:
+  proposal:
+    - Describe API, frontend, persistence, and operational impact when applicable.
+  specs:
+    - Use behavior-first requirements with at least one GIVEN, WHEN, THEN scenario.
+  tasks:
+    - Include focused unittest coverage for changed Python behavior.
+    - Keep runtime data, certificates, and private keys out of committed artifacts.
+
+operations:
+  apply:
+    guidance:
+      - Run the focused unittest command before marking implementation tasks complete.
+  archive:
+    guidance:
+      - Confirm that the current specs still describe the shipped behavior before archiving.
