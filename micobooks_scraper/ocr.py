@@ -3,9 +3,12 @@
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from io import BytesIO
+import os
 from pathlib import Path
 import re
+from typing import Literal
 
 from PIL import Image, ImageOps
 import pytesseract
@@ -26,13 +29,97 @@ class OcrError(RuntimeError):
     """Raised when OCR cannot be completed."""
 
 
-def extract_isbn_candidates(image_bytes: bytes) -> list[str]:
+@dataclass(frozen=True)
+class OcrConfig:
+    """Validated OCR resource settings."""
+
+    profile: Literal["standard", "raspberry-pi"]
+    preprocess_scale: float
+    max_dimension: int | None
+    max_workers: int
+
+    @classmethod
+    def from_environment(cls) -> "OcrConfig":
+        profile = os.getenv("MICOBOOKS_OCR_PROFILE", "standard").strip().lower()
+        if profile not in {"standard", "raspberry-pi"}:
+            raise OcrError("MICOBOOKS_OCR_PROFILE must be 'standard' or 'raspberry-pi'.")
+
+        defaults = {
+            "standard": (2.0, None, 4),
+            "raspberry-pi": (1.0, 2048, 1),
+        }
+        default_scale, default_dimension, default_workers = defaults[profile]
+        scale = _read_float_setting("MICOBOOKS_OCR_SCALE", default_scale, minimum=0.1, maximum=4.0)
+        max_dimension = _read_int_setting(
+            "MICOBOOKS_OCR_MAX_DIMENSION",
+            default_dimension,
+            minimum=256,
+            maximum=8192,
+            allow_none=True,
+        )
+        max_workers = _read_int_setting(
+            "MICOBOOKS_OCR_MAX_WORKERS",
+            default_workers,
+            minimum=1,
+            maximum=4,
+        )
+        return cls(
+            profile=profile,
+            preprocess_scale=scale,
+            max_dimension=max_dimension,
+            max_workers=max_workers,
+        )
+
+
+def _read_float_setting(name: str, default: float, minimum: float, maximum: float) -> float:
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return default
+    try:
+        parsed = float(value)
+    except ValueError as error:
+        raise OcrError(f"{name} must be a number.") from error
+    if not minimum <= parsed <= maximum:
+        raise OcrError(f"{name} must be between {minimum} and {maximum}.")
+    return parsed
+
+
+def _read_int_setting(
+    name: str,
+    default: int | None,
+    minimum: int,
+    maximum: int,
+    allow_none: bool = False,
+) -> int | None:
+    value = os.getenv(name)
+    if value is None or not value.strip():
+        return default
+    if allow_none and value.strip().lower() in {"none", "off", "unlimited"}:
+        return None
+    try:
+        parsed = int(value)
+    except ValueError as error:
+        raise OcrError(f"{name} must be an integer.") from error
+    if not minimum <= parsed <= maximum:
+        raise OcrError(f"{name} must be between {minimum} and {maximum}.")
+    return parsed
+
+
+def extract_isbn_candidates(image_bytes: bytes, config: OcrConfig | None = None) -> list[str]:
     """Read barcodes first, then use OCR for printed ISBN fallback."""
+    config = config or OcrConfig.from_environment()
     try:
         image = Image.open(BytesIO(image_bytes))
         image = ImageOps.exif_transpose(image).convert("L")
         image = ImageOps.autocontrast(image)
-        image = image.resize((image.width * 2, image.height * 2))
+        scale = config.preprocess_scale
+        if config.max_dimension:
+            scale = min(scale, config.max_dimension / max(image.width, image.height))
+        if scale != 1:
+            image = image.resize(
+                (max(1, round(image.width * scale)), max(1, round(image.height * scale))),
+                Image.Resampling.LANCZOS,
+            )
         candidates = extract_barcode_candidates(image)
         label_area = image.crop((0, image.height // 2, image.width, image.height))
         thresholded_label = label_area.point(lambda value: 255 if value > 150 else 0)
@@ -43,7 +130,7 @@ def extract_isbn_candidates(image_bytes: bytes) -> list[str]:
             (thresholded_label, 11),
             (image, 11),
         ]
-        with ThreadPoolExecutor(max_workers=min(4, len(ocr_passes))) as executor:
+        with ThreadPoolExecutor(max_workers=min(config.max_workers, len(ocr_passes))) as executor:
             text_parts = list(executor.map(_run_ocr, ocr_passes))
         text = "\n".join(text_parts)
     except pytesseract.TesseractNotFoundError as error:

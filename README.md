@@ -38,6 +38,62 @@ On Debian/Ubuntu Linux:
 sudo apt install tesseract-ocr
 ```
 
+### Raspberry Pi 4 Linux
+
+The supported baseline is 64-bit Raspberry Pi OS on a Raspberry Pi 4. Install
+the native prerequisites and create the project environment:
+
+```bash
+sudo apt update
+sudo apt install python3-venv tesseract-ocr libzbar0
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+Enable the bounded OCR profile for Pi-class CPU and memory resources:
+
+```bash
+export MICOBOOKS_OCR_PROFILE=raspberry-pi
+.venv/bin/python -m micobooks_scraper.server \
+  --host 0.0.0.0 --port 8443 \
+  --cert certs/server.crt --key certs/server.key
+```
+
+The Pi profile uses one OCR worker, avoids the default image upscaling, and
+limits the processed image dimension to 2048 pixels. Tune it with
+`MICOBOOKS_OCR_MAX_WORKERS`, `MICOBOOKS_OCR_SCALE`, and
+`MICOBOOKS_OCR_MAX_DIMENSION`; invalid values are reported explicitly.
+
+For unattended operation, create a systemd unit such as
+`/etc/systemd/system/micobooks.service` and adjust the user and project path:
+
+```ini
+[Unit]
+Description=Micobooks scraper
+After=network-online.target
+
+[Service]
+User=micobooks
+WorkingDirectory=/opt/micobooksScrapper
+Environment=MICOBOOKS_OCR_PROFILE=raspberry-pi
+ExecStart=/opt/micobooksScrapper/.venv/bin/python -m micobooks_scraper.server
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+Enable it with `sudo systemctl enable --now micobooks`. Keep the certificate
+and private key readable only by the service account, and retain the default
+LAN-only access policy.
+
+Smoke-test the service from the Pi:
+
+```bash
+curl -k https://127.0.0.1:8443/health
+curl -k -F "image=@sample-book.jpg" https://127.0.0.1:8443/api/quote-from-image
+```
+
 ## Start the HTTPS server
 
 From the project directory:
