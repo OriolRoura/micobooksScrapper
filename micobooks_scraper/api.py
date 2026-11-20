@@ -6,6 +6,7 @@ import ipaddress
 import logging
 import os
 from pathlib import Path
+import sys
 from typing import Literal
 
 from fastapi import File, FastAPI, HTTPException, UploadFile
@@ -18,6 +19,7 @@ from starlette.requests import Request
 from .client import MicobooksClient, MicobooksError
 from .history import HistoryStore
 from .ocr import OcrError, extract_isbn_candidates
+from .version import __version__
 
 
 logger = logging.getLogger(__name__)
@@ -77,7 +79,7 @@ def _allowed_origins() -> list[str]:
     return [origin.strip() for origin in configured_origins.split(",") if origin.strip()]
 
 
-app = FastAPI(title="Micobooks Scraper API", version="0.1.0")
+app = FastAPI(title="Micobooks Scraper API", version=__version__)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins(),
@@ -98,7 +100,8 @@ async def restrict_public_clients(request: Request, call_next):
     return await call_next(request)
 
 
-FRONTEND_DIR = Path(__file__).resolve().parent.parent / "frontend"
+_BUNDLE_ROOT = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent))
+FRONTEND_DIR = _BUNDLE_ROOT / "frontend"
 app.mount("/app", StaticFiles(directory=FRONTEND_DIR, html=True), name="frontend")
 history_store = HistoryStore()
 

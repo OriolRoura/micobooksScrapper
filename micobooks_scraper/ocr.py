@@ -8,6 +8,8 @@ from io import BytesIO
 import os
 from pathlib import Path
 import re
+import shutil
+import sys
 from typing import Literal
 
 from PIL import Image, ImageOps
@@ -16,10 +18,29 @@ import zxingcpp
 
 
 def _configure_tesseract() -> None:
-    """Use the standard Windows installation path when PATH is stale."""
-    windows_path = Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe")
-    if windows_path.exists():
-        pytesseract.pytesseract.tesseract_cmd = str(windows_path)
+    """Prefer an explicitly configured or bundled native Tesseract binary."""
+    candidates = []
+    configured_path = os.getenv("TESSERACT_CMD", "").strip()
+    if configured_path:
+        candidates.append(Path(configured_path))
+    candidates.append(Path(r"C:\Program Files\Tesseract-OCR\tesseract.exe"))
+    if getattr(sys, "frozen", False):
+        candidates.append(Path(sys.executable).resolve().parent / "tesseract" / "tesseract.exe")
+
+    for candidate in candidates:
+        if candidate.is_file():
+            pytesseract.pytesseract.tesseract_cmd = str(candidate)
+            return
+
+
+def validate_tesseract() -> None:
+    """Raise an explicit error when the native OCR executable is unavailable."""
+    command = str(pytesseract.pytesseract.tesseract_cmd)
+    if Path(command).is_file() or shutil.which(command):
+        return
+    raise OcrError(
+        "Native Tesseract was not found. Install it or set TESSERACT_CMD to its executable path."
+    )
 
 
 _configure_tesseract()

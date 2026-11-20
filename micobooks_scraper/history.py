@@ -5,12 +5,15 @@ from __future__ import annotations
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+import sys
 import threading
 from typing import Any
 from uuid import uuid4
 
 
-DEFAULT_HISTORY_PATH = Path(__file__).resolve().parent.parent / "data" / "analyzed_books.json"
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+_DEPLOYMENT_ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else _PROJECT_ROOT
+DEFAULT_HISTORY_PATH = _DEPLOYMENT_ROOT / "data" / "analyzed_books.json"
 
 
 def canonical_isbn(identifier: str) -> str:

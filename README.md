@@ -12,6 +12,12 @@ Personal-use web tool that captures or uploads a book image, detects an ISBN loc
 
 Python dependencies are pinned by compatible version ranges in `requirements.txt`.
 
+Release builds can also produce a platform-specific server executable. It
+includes the Python runtime, API, dependencies, and frontend, so Python does
+not need to be installed on the target server. Certificates remain external
+files and native Tesseract must be installed or provided according to the
+target platform's release instructions.
+
 ## Setup
 
 Create the virtual environment if it does not exist:
@@ -148,6 +154,36 @@ New-NetFirewallRule -DisplayName "Micobooks HTTPS development" -Direction Inboun
 
 Keep the firewall rule on the `Private` profile so the service is not opened
 on public networks.
+
+## Executable release builds
+
+For versions that meet the release-build rule (`2.0.1` or a major-version
+increase), GitHub Actions creates a platform-specific server executable. The
+executable includes the Python runtime, backend, dependencies, and frontend,
+so Python is not required on the target server.
+
+Copy the executable for the target operating system and architecture to the
+server, together with:
+
+- `certs/server.crt`
+- `certs/server.key`
+- a native Tesseract installation
+
+Run the executable from its deployment directory:
+
+```powershell
+.\micobooks-server-2.0.1-windows-x64.exe
+```
+
+or on Linux:
+
+```bash
+./micobooks-server-2.0.1-linux-arm64
+```
+
+The default URL remains `https://<server-address>:8443/app/`. Runtime
+history is stored in a `data/` directory beside the executable. Keep the
+private key outside the executable and restrict its permissions.
 
 ## Features
 

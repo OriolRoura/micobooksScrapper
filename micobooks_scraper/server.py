@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
+import sys
 
 import uvicorn
 
+from .api import app
+from .ocr import validate_tesseract
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-DEFAULT_CERTIFICATE = PROJECT_ROOT / "certs" / "server.crt"
-DEFAULT_KEY = PROJECT_ROOT / "certs" / "server.key"
+DEPLOYMENT_ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else PROJECT_ROOT
+DEFAULT_CERTIFICATE = DEPLOYMENT_ROOT / "certs" / "server.crt"
+DEFAULT_KEY = DEPLOYMENT_ROOT / "certs" / "server.key"
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -37,6 +41,11 @@ def main() -> None:
         missing_paths = ", ".join(missing)
         raise SystemExit(f"Cannot start HTTPS server. Missing TLS file(s): {missing_paths}")
 
+    try:
+        validate_tesseract()
+    except RuntimeError as error:
+        raise SystemExit(f"Cannot start HTTPS server. {error}") from error
+
     if options.allow_public_access:
         import os
 
@@ -50,7 +59,7 @@ def main() -> None:
         else "Access policy: localhost and private-LAN clients only."
     )
     uvicorn.run(
-        "micobooks_scraper.api:app",
+        app,
         host=options.host,
         port=options.port,
         ssl_certfile=str(certificate),
