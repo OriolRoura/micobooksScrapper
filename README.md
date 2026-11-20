@@ -157,8 +157,10 @@ on public networks.
 
 ## Executable release builds
 
-For versions that meet the release-build rule (`2.0.1` or a major-version
-increase), GitHub Actions creates a platform-specific server executable. The
+For versions that meet the release-build rule (an increase in the major or
+minor component), push the version change to the repository's default branch.
+Patch-only changes do not create a release. GitHub Actions then creates the matching Git tag and GitHub Release
+automatically, with platform-specific server executables attached. The
 executable includes the Python runtime, backend, dependencies, and frontend,
 so Python is not required on the target server.
 

@@ -21,9 +21,9 @@ handle the first release explicitly.
 The build condition is:
 
 ```text
-current == 2.0.1
-OR
 current.major > previous.major
+OR
+(current.major == previous.major AND current.minor > previous.minor)
 ```
 
 The workflow should expose the decision in its logs and complete successfully
@@ -66,9 +66,11 @@ platform and architecture in its name, for example
 `micobooks-server-2.0.1-windows-x64.exe` or
 `micobooks-server-2.0.1-linux-arm64`.
 
-Upload the executables as GitHub Actions artifacts and, when the workflow is
-running for a matching GitHub release, attach them to that release. Generated
-executables must not be committed to the repository.
+Upload the executables as GitHub Actions artifacts. After all target builds
+complete, create the `v<version>` tag at the triggering commit and create the
+matching GitHub Release with all executables attached as release assets. If
+the release already exists, replace its assets rather than creating a second
+release. Generated executables must not be committed to the repository.
 
 ## Compatibility
 

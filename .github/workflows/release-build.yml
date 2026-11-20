@@ -8,6 +8,7 @@ permissions:
 
 jobs:
   decision:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ubuntu-latest
     outputs:
       build: ${{ steps.version.outputs.build }}
@@ -64,16 +65,31 @@ jobs:
         with:
           name: micobooks-server-${{ needs.decision.outputs.version }}-${{ matrix.platform }}
           path: dist/micobooks-server-${{ needs.decision.outputs.version }}-${{ matrix.platform }}${{ matrix.extension }}
-      - name: Attach to matching GitHub release
-        if: startsWith(github.ref, 'refs/tags/')
-        shell: bash
+
+  release:
+    needs: [decision, build]
+    if: needs.decision.outputs.build == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download executable artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: micobooks-server-${{ needs.decision.outputs.version }}-*
+          merge-multiple: true
+      - name: Create or update GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
+        shell: bash
         run: |
+          set -euo pipefail
           release="v${{ needs.decision.outputs.version }}"
-          asset="dist/micobooks-server-${{ needs.decision.outputs.version }}-${{ matrix.platform }}${{ matrix.extension }}"
+          title="Micobooks Server ${{ needs.decision.outputs.version }}"
           if gh release view "$release" >/dev/null 2>&1; then
-            gh release upload "$release" "$asset" --clobber
+            gh release upload "$release" dist/* --clobber
           else
-            echo "No matching GitHub release exists for $release; workflow artifact retained."
+            gh release create "$release" dist/* \
+              --target "${{ github.sha }}" \
+              --title "$title" \
+              --generate-notes
           fi

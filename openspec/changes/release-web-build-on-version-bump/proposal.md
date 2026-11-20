@@ -16,9 +16,9 @@ executable deployment artifact.
 
 The project SHALL define one canonical semantic version and SHALL create a
 platform-specific executable containing the backend, frontend, Python
-runtime, and Python dependencies when a pushed version is exactly `2.0.1` or
-when the pushed version increases the major component compared with the
-previous release version (for example, `2.0.0` to `3.0.0`).
+runtime, and Python dependencies when a pushed version increases the major or
+minor component compared with the previous release version (for example,
+`2.0.0` to `2.1.0` or `2.0.0` to `3.0.0`). Patch-only increases are excluded.
 
 Running the executable SHALL start the HTTPS server and serve the frontend at
 the existing `/app/` path without requiring a Python installation.
@@ -31,12 +31,13 @@ the existing `/app/` path without requiring a Python installation.
 - Compare the pushed version with the previous release version using
   semantic-version rules.
 - Build and publish a versioned executable containing the FastAPI server,
-  frontend, Python runtime, and Python dependencies when the exact `2.0.1`
-  exception or a major-version increase is detected.
+  frontend, Python runtime, and Python dependencies when a major or minor
+  version increase is detected.
 - Produce separate executables for each supported target platform rather than
   claiming that one binary runs on Windows and Linux.
-- Upload the executables as workflow artifacts and attach them to the
-  matching GitHub release when a release exists.
+- Upload the executables as workflow artifacts and automatically create the
+  matching `v<version>` tag and GitHub Release, including all executables as
+  release assets.
 - Keep private keys and mutable runtime data outside the executable.
 - Document native Tesseract as an included or separately installed runtime
   dependency for each target platform.
@@ -57,6 +58,5 @@ the existing `/app/` path without requiring a Python installation.
 - Automatically deploying the executable to a hosting provider.
 - Producing one universal binary for all operating systems and CPU
   architectures.
-- Publishing artifacts for ordinary patch or minor-version changes other than
-  the explicit `2.0.1` release.
+- Publishing artifacts for patch-only version changes or version downgrades.
 - Committing generated executables to the repository.

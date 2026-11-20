@@ -7,7 +7,7 @@
 - [x] 1.2 Add a GitHub Actions workflow that runs on repository pushes.
 - [x] 1.3 Validate the current version and obtain the previous release version
   before deciding whether to build.
-- [x] 1.4 Implement the exact `2.0.1` and major-version-increase conditions,
+- [x] 1.4 Implement major- and minor-version-increase conditions,
   including first-release behavior and explicit workflow logging.
 
 ## 2. Deployable server executable
@@ -23,14 +23,14 @@
   when missing.
 - [x] 2.5 Keep certificates, private keys, runtime data, virtual
   environments, and repository metadata out of the executable.
-- [x] 2.6 Upload executables as workflow artifacts and attach them to an
-  existing matching GitHub release when applicable.
+- [x] 2.6 Upload executables as workflow artifacts and automatically create
+  the matching tag and GitHub Release with those executables as assets.
 - [x] 2.7 Preserve the existing `/app/` URL and frontend asset references.
 
 ## 3. Verification
 
-- [x] 3.1 Add focused tests for valid, invalid, exact-`2.0.1`, major-bump,
-  patch-bump, minor-bump, and first-release version decisions.
+- [x] 3.1 Add focused tests for valid, invalid, major-bump, patch-bump,
+  minor-bump, downgrade, and first-release version decisions.
 - [x] 3.2 Add a packaging check for bundled frontend assets and excluded
   sensitive/runtime files.
 - [ ] 3.3 Add a smoke test that runs each target executable and checks the

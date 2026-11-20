@@ -3,27 +3,28 @@
 ## Requirement: Build on the requested version conditions
 
 The repository SHALL build a versioned deployable server executable when the
-canonical version is exactly `2.0.1` or has a greater major component than
-the previous release version.
+canonical version increases the major component or, within the same major
+component, increases the minor component compared with the previous release
+version.
 
-### Scenario: The exact 2.0.1 version is pushed
+### Scenario: The minor version increases
 
-- **GIVEN** the canonical version is `2.0.1`
-- **WHEN** a commit containing that version is pushed
-- **THEN** the workflow builds the server executable
-- **AND** it publishes the versioned executable as a workflow artifact
+- **GIVEN** the previous release is `2.0.9`
+- **WHEN** version `2.1.0` is pushed
+- **THEN** the workflow builds and publishes the versioned server executable
+- **AND** it creates or updates the matching `v2.1.0` GitHub Release
 
 ### Scenario: The major version increases
 
 - **GIVEN** the previous release is `2.0.0`
 - **WHEN** version `3.0.0` is pushed
 - **THEN** the workflow builds and publishes the versioned server executable
+- **AND** it creates or updates the matching `v3.0.0` GitHub Release
 
 ### Scenario: A non-triggering version is pushed
 
-- **GIVEN** the previous release is `2.0.0`
-- **WHEN** version `2.0.1` is not the current version and the current version
-  has no greater major component
+- **GIVEN** the previous release is `2.1.0`
+- **WHEN** version `2.1.1` is pushed
 - **THEN** the workflow does not publish a server executable
 - **AND** it reports that the build condition was not met
 

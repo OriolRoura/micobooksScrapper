@@ -31,9 +31,9 @@ def extract_version(source: str) -> str | None:
 
 def should_build(current: str, previous: str | None) -> bool:
     current_version = SemanticVersion.parse(current)
-    if current_version == SemanticVersion(2, 0, 1):
-        return True
     if previous is None or not previous.strip():
         return False
     previous_version = SemanticVersion.parse(previous)
-    return current_version.major > previous_version.major
+    if current_version.major != previous_version.major:
+        return current_version.major > previous_version.major
+    return current_version.minor > previous_version.minor
